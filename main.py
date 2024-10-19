@@ -1,52 +1,18 @@
-import os
 from fastapi import FastAPI
-import mysql.connector
-from mysql.connector import Error
+from database import get_db_connection  # database.py から接続関数をインポート
 
 app = FastAPI()
-
-# 環境変数からMySQL接続情報を取得
-def get_db_connection():
-    try:
-        connection = mysql.connector.connect(
-            host=os.getenv("MYSQL_HOST"),  # ホスト名
-            user=os.getenv("MYSQL_USER"),  # ユーザー名
-            password=os.getenv("MYSQL_PASSWORD"),  # パスワード
-            database=os.getenv("MYSQL_DATABASE")  # データベース名
-        )
-        return connection
-    except Error as e:
-        print(f"Error: {e}")
-        return None
 
 # ルートエンドポイント
 @app.get("/")
 def read_root():
     return {"message": "POSアプリへようこそ！"}
 
-# データベースから製品情報を取得するエンドポイント（/products）
-@app.get("/products")
-def get_products_from_db():
-    # MySQLデータベースに接続
+# データベース接続確認用エンドポイント
+@app.get("/test_connection")
+def test_connection():
     connection = get_db_connection()
-    if connection is None:
-        return {"error": "データベースに接続できませんでした"}
-
-    try:
-        # クエリを実行して製品情報を取得
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM products")  # ここで実際のテーブル名を使用してください
-        products = cursor.fetchall()
-
-        # 結果を返す
-        return {"products": products}
-
-    except Error as e:
-        return {"error": str(e)}
-
-    finally:
-        # カーソルと接続を閉じる
-        if cursor:
-            cursor.close()
-        if connection:
-            connection.close()
+    if connection:
+        return {"message": "データベースに接続できました"}
+    else:
+        return {"error": "データベース接続に失敗しました"}
