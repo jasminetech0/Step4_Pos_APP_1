@@ -2,8 +2,9 @@
 
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
-from database import get_db  # SQLAlchemyのセッションを取得
-from models import Product  # Productモデルをインポート
+from database import get_db
+from models import Product, Transaction, TransactionDetail  # 追加部分
+import datetime  # 追加部分
 
 app = FastAPI()
 
@@ -14,7 +15,7 @@ def read_root():
 
 # データベース接続確認用エンドポイント
 @app.get("/test_connection")
-def test_connection(db: Session = Depends(get_db)):  # SQLAlchemyのセッションを使用
+def test_connection(db: Session = Depends(get_db)):
     try:
         result = db.execute("SELECT DATABASE();")  # 生のSQLを実行
         db_name = result.fetchone()
@@ -23,9 +24,65 @@ def test_connection(db: Session = Depends(get_db)):  # SQLAlchemyのセッショ
         raise HTTPException(status_code=500, detail="データベース接続に失敗しました")
 
 # 商品検索エンドポイント
-@app.get("/products/{product_id}")
-def get_product(product_id: int, db: Session = Depends(get_db)):
-    product = db.query(Product).filter(Product.id == product_id).first()
+@app.get("/products/{code}")
+def search_product(code: str, db: Session = Depends(get_db)):
+    product = db.query(Product).filter(Product.CODE == code).first()
     if product is None:
-        raise HTTPException(status_code=404, detail="商品が見つかりません")
-    return product
+        return None  # 対象が見つからない場合は NULL を返す
+    return {
+        "PRD_ID": product.PRD_ID,
+        "CODE": product.CODE,
+        "NAME": product.NAME,
+        "PRICE": product.PRICE
+    }
+
+# 購入処理API (追加部分)
+@app.post("/purchase/")
+def make_purchase(items: list[dict], cashier_code: str, db: Session = Depends(get_db)):
+    # 合計金額の変数
+    total_amount = 0
+
+    # 店舗コードとPOS機IDは固定
+    store_code = "30"
+    pos_no = "90"
+
+    # レジ担当者コードが空の場合、デフォルト値を設定
+    if not cashier_code:
+        cashier_code = "9999999999"
+
+    # 取引を作成
+    transaction = Transaction(
+        DATETIME=datetime.datetime.utcnow(),
+        EMP_CD=cashier_code,
+        STORE_CD=store_code,
+        POS_NO=pos_no,
+        TOTAL_AMT=0  # 最初は0で保存し、後で更新
+    )
+    db.add(transaction)
+    db.commit()
+    db.refresh(transaction)  # 取引IDを取得するためにリフレッシュ
+
+    # 取引明細を追加
+    for item in items:
+        product = db.query(Product).filter(Product.PRD_ID == item["PRD_ID"]).first()
+        if not product:
+            raise HTTPException(status_code=404, detail=f"商品ID {item['PRD_ID']} が見つかりません")
+
+        # 合計金額を計算
+        total_amount += product.PRICE
+
+        # 取引明細を作成
+        detail = TransactionDetail(
+            TRD_ID=transaction.TRD_ID,
+            PRD_ID=product.PRD_ID,
+            PRD_CODE=product.CODE,
+            PRD_NAME=product.NAME,
+            PRD_PRICE=product.PRICE,
+        )
+        db.add(detail)
+
+    # 合計金額を取引に更新
+    transaction.TOTAL_AMT = total_amount
+    db.commit()
+
+    return {"success": True, "total_amount": total_amount}

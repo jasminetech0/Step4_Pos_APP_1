@@ -9,17 +9,16 @@ db = SessionLocal()
 
 # サンプル商品データ
 products = [
-    Product(id=1, name="コーヒー", price=300),
-    Product(id=2, name="サンドイッチ", price=500),
-    Product(id=3, name="サラダ", price=450),
-    Product(id=4, name="ケーキ", price=400),
-    Product(id=5, name="お茶", price=250),
+    Product(PRD_ID=1, CODE="P000000000001", NAME="コーヒー", PRICE=300),
+    Product(PRD_ID=2, CODE="P000000000002", NAME="サンドイッチ", PRICE=500),
+    Product(PRD_ID=3, CODE="P000000000003", NAME="サラダ", PRICE=450),
+    Product(PRD_ID=4, CODE="P000000000004", NAME="ケーキ", PRICE=400),
+    Product(PRD_ID=5, CODE="P000000000005", NAME="お茶", PRICE=250),
 ]
 
-# 商品データをデータベースに追加
-db.add_all(products)  # サンプルデータを一括で挿入
+# 商品データをデータベースに挿入
+db.add_all(products)  # 複数のデータを一括で追加
 db.commit()  # コミットして保存
 db.close()  # セッションを閉じる
 
 print("サンプルデータがデータベースに挿入されました")
-
