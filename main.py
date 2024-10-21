@@ -5,8 +5,24 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import Product, Transaction, TransactionDetail  # 追加部分
 import datetime  # 追加部分
+from fastapi.middleware.cors import CORSMiddleware  # 追加
 
 app = FastAPI()
+
+# CORSの設定を追加
+origins = [
+    "https://tech0-gen-7-step4-studentwebapp-pos-39-cnb9heehgfc0ajbm.eastus-01.azurewebsites.net",  # Next.js サーバーのURL
+    "http://localhost:3000",  # ローカル開発環境のNext.js URL
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # ルートエンドポイント
 @app.get("/")
