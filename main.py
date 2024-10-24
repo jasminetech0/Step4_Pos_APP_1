@@ -84,8 +84,8 @@ def make_purchase(items: list[dict], cashier_code: str, db: Session = Depends(ge
         if not product:
             raise HTTPException(status_code=404, detail=f"商品ID {item['PRD_ID']} が見つかりません")
 
-        # 合計金額を計算
-        total_amount += product.PRICE
+        # 合計金額を計算（数量に基づく計算）
+        total_amount += product.PRICE * item["quantity"]  # 商品価格 × 購入数量
 
         # 取引明細を作成
         detail = TransactionDetail(
@@ -94,6 +94,7 @@ def make_purchase(items: list[dict], cashier_code: str, db: Session = Depends(ge
             PRD_CODE=product.CODE,
             PRD_NAME=product.NAME,
             PRD_PRICE=product.PRICE,
+            # ここで quantity を保存する場合、別途カラムをテーブルに追加する必要があります
         )
         db.add(detail)
 
