@@ -2,6 +2,7 @@
 
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import text  # text関数をインポート
 from database import get_db
 from models import Product, Transaction, TransactionDetail  # 追加部分
 import datetime  # 追加部分
@@ -35,12 +36,14 @@ def read_root():
 @app.get("/test_connection")
 def test_connection(db: Session = Depends(get_db)):
     try:
-        result = db.execute("SELECT DATABASE();")  # 生のSQLを実行
+        # 生のSQLをtextでラップして実行
+        result = db.execute(text("SELECT DATABASE();"))  
         db_name = result.fetchone()
         return {"message": f"データベース '{db_name[0]}' に接続できました"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail="データベース接続に失敗しました")
-
+        # エラー詳細を含めて返す
+        raise HTTPException(status_code=500, detail=f"データベース接続に失敗しました: {str(e)}")
+    
 # 商品検索エンドポイント
 @app.get("/products/{code}")
 def search_product(code: str, db: Session = Depends(get_db)):
