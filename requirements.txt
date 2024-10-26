@@ -13,3 +13,4 @@ starlette==0.39.2
 typing_extensions==4.12.2
 uvicorn==0.31.1
 SQLAlchemy==2.0.32
+python-dotenv
