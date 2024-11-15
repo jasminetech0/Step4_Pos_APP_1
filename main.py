@@ -107,3 +107,66 @@ def make_purchase(items: list[dict], cashier_code: str, db: Session = Depends(ge
     db.commit()
 
     return {"success": True, "total_amount": total_amount}
+
+# 在庫情報取得エンドポイント
+# 備蓄品マスターからJANコードを使って商品情報を取得
+app.get("/ReadStockpileInfo/")
+def read_stockpile_info(jan_code: str, db: Session = Depends(get_db)):
+    # JANコードを使って商品情報を取得
+    product = db.query(Product).filter(Product.JAN_CODE == jan_code).first()
+    if product is None:
+        return None  # 対象が見つからない場合は NULL を返す
+    return {
+        "PRD_ID": product.PRD_ID,
+        "CODE": product.CODE,
+        "NAME": product.NAME,
+        "PRICE": product.PRICE
+    }
+
+# 備蓄品情報登録エンドポイント
+app.post("/PostStockpileInfo/")
+# 入力した情報を備蓄品マスターに登録
+# 登録時に「ポイントを追加」
+def post_stockpile_info(jan_code: str, name: str, price: int, db: Session = Depends(get_db)):
+    # 備蓄品マスターに商品情報を登録
+    product = Product(
+        JAN_CODE=jan_code,
+        NAME=name,
+        PRICE=price
+    )
+    db.add(product)
+    db.commit()
+
+    return {"success": True}
+
+# 備蓄品情報更新エンドポイント
+app.put("/PutStockpileInfo/")
+# 入力した情報で備蓄品マスターを更新
+# JANコードが商品マスターにある場合に実行
+def put_stockpile_info(jan_code: str, name: str, price: int, db: Session = Depends(get_db)):
+    # JANコードを使って商品情報を取得
+    product = db.query(Product).filter(Product.JAN_CODE == jan_code).first()
+    if product is None:
+        return {"success": False, "message": "JANコードが見つかりません"}
+
+    # 商品情報を更新
+    product.NAME = name
+    product.PRICE = price
+    db.commit()
+
+    return {"success": True}
+
+# 備蓄品画像登録エンドポイント
+app.post("/PostStockpileImage/")
+# アップロードした画像データを備蓄品マスターに登録
+def post_stockpile_image(jan_code: str, image: str, db: Session = Depends(get_db)):
+    # JANコードを使って商品情報を取得
+    product = db.query(Product).filter(Product.JAN_CODE == jan_code).first()
+    if product is None:
+        return {"success": False, "message": "JANコードが見つかりません"}
+
+    # 商品情報を更新
+    product.IMAGE = image
+    db.commit()
+
+    return {"success": True}
