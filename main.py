@@ -6,6 +6,10 @@ from models import Product, Transaction, TransactionDetail
 import datetime
 from pydantic import BaseModel  # 追加部分
 from fastapi.middleware.cors import CORSMiddleware  # 追加部分
+from fastapi import FastAPI, File, UploadFile
+from azure.storage.blob import BlobServiceClient
+from uuid import uuid4
+import os
 
 app = FastAPI()
 
@@ -22,6 +26,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Azure Blob Storage 設定
+AZURE_STORAGE_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+CONTAINER_NAME = "jasmines"  # コンテナ名
+
+# BlobServiceClient を初期化
+blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_CONNECTION_STRING)
+
+# BLOB URL ベースを定義（blob_service_client 初期化後に配置）
+BLOB_URL_BASE = f"https://{blob_service_client.account_name}.blob.core.windows.net/{CONTAINER_NAME}/"
+
 
 # データモデル (必要に応じて拡張可能)
 class StockpileInfo(BaseModel):
@@ -126,5 +141,20 @@ async def get_stockpile_point(user_id: int):
 
 @app.post("/PostStockpileImage/")
 async def post_stockpile_image(file: UploadFile = File(...)):
-    print(f"Received file: {file.filename}")
-    return {"message": "OK"}
+    try:
+        # ファイル名の一意性を確保
+        unique_filename = f"{uuid4()}_{file.filename}"
+        
+        # Blob クライアントを取得
+        blob_client = blob_service_client.get_blob_client(container=CONTAINER_NAME, blob=unique_filename)
+        
+        # ファイルをアップロード
+        blob_client.upload_blob(file.file, overwrite=True)
+        
+        # アップロードしたファイルの URL を組み立て
+        file_url = f"{BLOB_URL_BASE}{unique_filename}"
+        
+        return {"message": "ファイルが正常にアップロードされました", "file_url": file_url}
+    except Exception as e:
+        print(f"エラー: {str(e)}")
+        return {"error": "ファイルアップロード中にエラーが発生しました"}

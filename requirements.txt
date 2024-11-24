@@ -14,3 +14,4 @@ typing_extensions==4.12.2
 uvicorn==0.31.1
 SQLAlchemy==2.0.32
 python-dotenv
+azure-storage-blob==12.23.1
