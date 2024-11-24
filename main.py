@@ -10,6 +10,7 @@ from fastapi import FastAPI, File, UploadFile
 from azure.storage.blob import BlobServiceClient
 from uuid import uuid4
 import os
+from dotenv import load_dotenv
 
 app = FastAPI()
 
@@ -27,6 +28,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# .env.local を読み込む
+load_dotenv(dotenv_path=".env.local")
+
 # Azure Blob Storage 設定
 AZURE_STORAGE_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
 CONTAINER_NAME = "jasmines"  # コンテナ名
@@ -42,6 +46,9 @@ BLOB_URL_BASE = f"https://{blob_service_client.account_name}.blob.core.windows.n
 class StockpileInfo(BaseModel):
     jan_code: str
     name: str = None
+    quantity: int = None
+    category: str = None
+    date: str = None
 
 # 4902181102480に対応する商品情報
 dummy_data = {
