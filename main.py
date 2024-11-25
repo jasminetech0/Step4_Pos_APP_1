@@ -123,7 +123,7 @@ def make_purchase(items: list[dict], cashier_code: str, db: Session = Depends(ge
 
     return {"success": True, "total_amount": total_amount}
 
-# 備蓄品のエンドポイント (追加部分)
+# JANコードから備蓄品の名前を取得する
 @app.get("/ReadStockpileInfo/")
 async def read_stockpile_info(jan_code: str):
     if jan_code in dummy_data:
