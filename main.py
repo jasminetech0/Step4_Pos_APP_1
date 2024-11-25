@@ -131,16 +131,32 @@ async def read_stockpile_info(jan_code: str):
     else:
         raise HTTPException(status_code=404, detail="商品が見つかりません")
 
+# 備蓄品の登録
 @app.post("/PostStockpileInfo/")
 async def post_stockpile_info(info: StockpileInfo):
     print("OK")
+    print(info)
     return {"message": "OK"}
 
+@app.get("/products/{code}")
+def search_product(code: str, db: Session = Depends(get_db)):
+    product = db.query(Product).filter(Product.CODE == code).first()
+    if product is None:
+        return None
+    return {
+        "PRD_ID": product.PRD_ID,
+        "CODE": product.CODE,
+        "NAME": product.NAME,
+        "PRICE": product.PRICE
+    }
+
+# 備蓄品の更新
 @app.put("/PutStockpileInfo/")
 async def put_stockpile_info(info: StockpileInfo):
     print("OK")
     return {"message": "OK"}
 
+# 備蓄品情報の取得
 @app.get("/GetStockpilePoint/")
 async def get_stockpile_point(user_id: int):
     print("OK")
