@@ -6,6 +6,11 @@ from models import Product, Transaction, TransactionDetail
 import datetime
 from pydantic import BaseModel  # 追加部分
 from fastapi.middleware.cors import CORSMiddleware  # 追加部分
+import mysql.connector
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 app = FastAPI()
 
@@ -23,6 +28,61 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Azure Database for MySQL接続設定
+db_config = {
+    "host": os.getenv("DB_HOST"),  # Azureのホスト名
+    "user": os.getenv("DB_USER"),  # ユーザー名
+    "password": os.getenv("DB_PASS"),  # パスワード
+    "database": os.getenv("DB_NAME"),  # データベース名
+}
+
+# Pydanticモデルで入力データを定義
+class PossessionItem(BaseModel):
+    product_name: str
+    possession_count: int
+    expire_date: str  # YYYY-MM-DD形式
+    category: str
+
+@app.post("/api/possessions")
+def add_possession(item: PossessionItem):
+    try:
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor()
+
+        # SQLクエリ
+        sql = """
+        INSERT INTO possession_list (Customer_ID, Product_Name, Possession_count, Expire_Date, Category)
+        VALUES (%s, %s, %s, %s, %s)
+        """
+        values = (1, item.product_name, item.possession_count, item.expire_date, item.category)  # Customer_IDは固定値1
+
+        cursor.execute(sql, values)
+        conn.commit()
+
+        return {"message": "Item added successfully", "id": cursor.lastrowid}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.get("/api/possessions")
+def get_possessions():
+    try:
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor(dictionary=True)
+
+        # データベースからデータを取得
+        cursor.execute("SELECT * FROM possession_list")
+        results = cursor.fetchall()
+
+        return {"data": results}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+# こっからジョーカーズ作成
 # データモデル (必要に応じて拡張可能)
 class StockpileInfo(BaseModel):
     jan_code: str
