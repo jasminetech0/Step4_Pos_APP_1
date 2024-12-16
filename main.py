@@ -45,6 +45,7 @@ class PossessionItem(BaseModel):
 
 @app.post("/api/possessions")
 def add_possession(item: PossessionItem):
+    print("受信データ:", item)
     try:
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor()
