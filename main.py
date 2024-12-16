@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware  # 追加部分
 import mysql.connector
 from dotenv import load_dotenv
 import os
+import requests
 
 load_dotenv()
 
@@ -35,6 +36,7 @@ db_config = {
     "password": os.getenv("DB_PASS"),  # パスワード
     "database": os.getenv("DB_NAME"),  # データベース名
 }
+
 
 # Pydanticモデルで入力データを定義
 class PossessionItem(BaseModel):
@@ -83,6 +85,48 @@ def get_possessions():
     finally:
         cursor.close()
         conn.close()
+
+
+# Yahoo APIの設定
+YAHOO_API_URL = "https://shopping.yahooapis.jp/ShoppingWebService/V3/itemSearch"
+YAHOO_APP_ID = os.getenv("YAHOO_APP_ID")
+
+@app.get("/api/search-product/")
+async def search_product(jan_code: str):
+    if not YAHOO_APP_ID:
+        raise HTTPException(status_code=500, detail="Yahoo APP IDが設定されていません。")
+
+    try:
+        # Yahoo APIにリクエストを送信
+        response = requests.get(YAHOO_API_URL, params={
+            "appid": YAHOO_APP_ID,
+            "jan_code": jan_code,
+            "hits": 1
+        })
+
+        # APIのレスポンスを検証
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail="Yahoo APIエラー")
+
+        data = response.json()
+
+        # 商品情報を取得
+        if "hits" in data and len(data["hits"]) > 0:
+            product = data["hits"][0]
+            return {
+                "product_name": product.get("name", "不明な商品名"),
+                "product_url": product.get("url", ""),
+                "image_url": product.get("image", {}).get("medium", "")
+            }
+        else:
+            raise HTTPException(status_code=404, detail="商品が見つかりません。")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
 # こっからジョーカーズ作成
 # データモデル (必要に応じて拡張可能)
 class StockpileInfo(BaseModel):
