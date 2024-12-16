@@ -91,41 +91,50 @@ def get_possessions():
 YAHOO_API_URL = "https://shopping.yahooapis.jp/ShoppingWebService/V3/itemSearch"
 YAHOO_APP_ID = os.getenv("YAHOO_APP_ID")
 
-@app.get("/api/search-product/")
-async def search_product(jan_code: str):
-    if not YAHOO_APP_ID:
-        raise HTTPException(status_code=500, detail="Yahoo APP IDが設定されていません。")
+# 商品検索エンドポイント
+@app.get("/api/search-product")
+def search_product(jan_code: str):
+    params = {
+        "appid": YAHOO_APP_ID,
+        "query": jan_code,
+        "hits": 1,  # 最初の1件のみ取得
+    }
 
     try:
-        # Yahoo APIにリクエストを送信
-        response = requests.get(YAHOO_API_URL, params={
-            "appid": YAHOO_APP_ID,
-            "jan_code": jan_code,
-            "hits": 1
-        })
-
-        # APIのレスポンスを検証
-        if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail="Yahoo APIエラー")
-
+        response = requests.get(YAHOO_API_URL, params=params)
+        response.raise_for_status()
         data = response.json()
 
-        # 商品情報を取得
-        if "hits" in data and len(data["hits"]) > 0:
-            product = data["hits"][0]
-            return {
-                "product_name": product.get("name", "不明な商品名"),
-                "product_url": product.get("url", ""),
-                "image_url": product.get("image", {}).get("medium", "")
-            }
-        else:
-            raise HTTPException(status_code=404, detail="商品が見つかりません。")
+        # レスポンスデータの確認
+        if "hits" not in data or not data["hits"]:
+            raise HTTPException(status_code=404, detail="商品が見つかりません")
 
+        # 商品名を抽出
+        product_name = data["hits"][0]["name"]
+
+        return {"product_name": product_name}
+
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Yahoo API呼び出しエラー: {str(e)}")
+
+# デバッグ用
+@app.get("/api/debug-yahoo-api")
+def debug_yahoo_api(jan_code: str):
+    yahoo_api_url = "https://shopping.yahooapis.jp/ShoppingWebService/V3/itemSearch"
+    appid = "YOUR_YAHOO_APP_ID"
+
+    params = {
+        "appid": appid,
+        "query": jan_code,
+        "hits": 1
+    }
+
+    try:
+        response = requests.get(yahoo_api_url, params=params)
+        response.raise_for_status()
+        return response.json()  # Yahoo APIのレスポンスをそのまま返す
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-
+        return {"error": str(e)}
 
 # こっからジョーカーズ作成
 # データモデル (必要に応じて拡張可能)
