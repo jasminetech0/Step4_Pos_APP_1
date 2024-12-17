@@ -177,7 +177,7 @@ YAHOO_API_URL = "https://shopping.yahooapis.jp/ShoppingWebService/V3/itemSearch"
 YAHOO_APP_ID = os.getenv("YAHOO_APP_ID")
 
 # 商品検索エンドポイント
-@app.get("/api/search-product")
+@app.get("/api/search-product/")
 def search_product(jan_code: str):
     params = {
         "appid": YAHOO_APP_ID,
