@@ -37,6 +37,7 @@ db_config = {
     "database": os.getenv("DB_NAME"),  # データベース名
 }
 
+print(db_config)
 
 # Pydanticモデルで入力データを定義
 class PossessionItem(BaseModel):
