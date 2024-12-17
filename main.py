@@ -113,6 +113,63 @@ def update_possession(possession_id: int, item: PossessionItem):
         cursor.close()
         conn.close()
 
+# Pydanticモデル: 備蓄品計算用入力データ
+class EstimateRequest(BaseModel):
+    adults: int
+    children: int
+    days: int
+
+# Pydanticモデル: レスポンスデータ
+class EstimateResponse(BaseModel):
+    product_name: str
+    unit: str
+    total_quantity: int
+
+
+@app.post("/api/estimate")
+def calculate_estimate(request: EstimateRequest):
+    """
+    備蓄品の必要量を計算し返却するAPI。
+    """
+    if request.adults < 0 or request.children < 0 or request.days <= 0:
+        raise HTTPException(status_code=400, detail="Invalid input values")
+
+    try:
+        # DB接続
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor(dictionary=True)
+
+        # 備蓄品マスタからデータ取得
+        cursor.execute("SELECT * FROM items")
+        items = cursor.fetchall()
+
+        result = []
+        for item in items:
+            adult_per_day = item.get("adult_per_day", 0)
+            child_per_day = item.get("child_per_day", 0)
+            general_item = item.get("general_item", 0)
+
+            # 総量計算
+            total_for_adults = adult_per_day * request.adults * request.days
+            total_for_children = child_per_day * request.children * request.days
+            total_quantity = total_for_adults + total_for_children
+
+            # general_itemが1の場合、必ず1個追加
+            if total_quantity > 0 or general_item == 1:
+                result.append({
+                    "product_name": item["product_name"],
+                    "unit": item["unit"],
+                    "total_quantity": max(1, total_quantity)  # 最小値1
+                })
+
+        return {"data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+
 
 # Yahoo APIの設定
 YAHOO_API_URL = "https://shopping.yahooapis.jp/ShoppingWebService/V3/itemSearch"
