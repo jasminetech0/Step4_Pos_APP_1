@@ -184,8 +184,11 @@ def search_product(jan_code: str):
         "hits": 1,  # 最初の1件のみ取得
     }
 
+    print("test")
+
     try:
         response = requests.get(YAHOO_API_URL, params=params)
+        print(response)
         response.raise_for_status()
         data = response.json()
 
