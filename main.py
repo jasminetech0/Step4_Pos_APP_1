@@ -86,6 +86,33 @@ def get_possessions():
         cursor.close()
         conn.close()
 
+@app.put("/api/possessions/{possession_id}")
+def update_possession(possession_id: int, item: PossessionItem):
+    try:
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor()
+
+        # SQLクエリ: データを更新
+        sql = """
+        UPDATE possession_list
+        SET Product_Name=%s, Possession_count=%s, Expire_Date=%s, Category=%s
+        WHERE Possession_List_ID=%s
+        """
+        values = (item.product_name, item.possession_count, item.expire_date, item.category, possession_id)
+
+        cursor.execute(sql, values)
+        conn.commit()
+
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="対象の備蓄品が見つかりません")
+
+        return {"message": "更新が成功しました"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
 
 # Yahoo APIの設定
 YAHOO_API_URL = "https://shopping.yahooapis.jp/ShoppingWebService/V3/itemSearch"
